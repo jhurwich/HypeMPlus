@@ -1,0 +1,15 @@
+li.autoskipdiv {
+  float: right;
+  position: relative;
+  height: 25px;
+  width: 25px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+div.autoskip-control {
+  float: left;
+  position: relative;
+  top: 1px;
+}
