@@ -192,16 +192,19 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
     },
 
     modifyPlayer : function() {
-      var playerAutoskip = $("<div id='playerAutoskip'></div>");
-      $(playerAutoskip).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
-      $(playerAutoskip).hover(function() {
-        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip-hover.png") + "')");
-      }, function() {
-        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
-      });
-      $(playerAutoskip).click(HypeMPlus.Inject.autoskipFromPlayer);
+       var playerAutoskip = $("<div class='playerAutoskip'></div>");
+       $(playerAutoskip).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
+       $(playerAutoskip).hover(function() {
+         $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip-hover.png") + "')");
+       }, function() {
+         $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
+       });
+       $(playerAutoskip).click(HypeMPlus.Inject.autoskipFromPlayer);
 
-      $(playerAutoskip).insertAfter($("#player-controls").find("#playerFav").first());
+       if ($("div.playerAutoskip").length != 0) {  
+         $("div.playerAutoskip").remove();
+       }
+       $(playerAutoskip).insertAfter($("#player-controls").find("#playerFav").first());
     },
 
     autoskipFromPlayer : function() {

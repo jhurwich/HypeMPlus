@@ -1,7 +1,7 @@
 #player-nowplaying {
   width: 449px !important;
 }
-#playerAutoskip {
+div.playerAutoskip {
   height: 33px;
   width: 32px;
   cursor: pointer;

@@ -45,6 +45,10 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
 
       case "set_autoskip":
         chrome.storage.sync.get("autoskip", function(stored) {
+          if (typeof(stored.autoskip) == "undefined") {
+            stored.autoskip = {};
+          }
+          
           if (typeof(request.on) != "undefined") {
             stored.autoskip[request.on] = true;
           }
