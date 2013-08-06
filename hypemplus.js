@@ -78,36 +78,29 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
 
       trackToBeSkipped: "",
       titleChangeListener: function(newTitle) {
-        var links = $("#player-nowplaying").children("a");
-        for (var i = 0; i < links.length; i++) {
-          var href = $(links[i]).attr("href");
-          if (href.indexOf("track") != -1) {
-            var id = href.replace("/track/", "");
+        var id = HypeMPlus.Util.getCurrentTrackID();
+        if (HypeMPlus.Inject.Autoskip.autoskipTracks[id]) {
+          // track should be skipped
+          HypeMPlus.Inject.Autoskip.trackToBeSkipped = newTitle;
 
-            if (HypeMPlus.Inject.Autoskip.autoskipTracks[id]) {
-              // track should be skipped
-              HypeMPlus.Inject.Autoskip.trackToBeSkipped = newTitle;
+          var attemptSkip = function() {
+            if (document.title == HypeMPlus.Inject.Autoskip.trackToBeSkipped) {
+             /* Play next by finding next track row and playing
+              * 
+              var skipRow = $("div[data-itemid='" + id + "']");
+              var nextRow = $(skipRow).next();
+              while (nextRow.attr("autoskip") == "true") {
+                nextRow = $(nextRow).next();
+              }
+              var nextPlay = $(nextRow).find(".playdiv > a").first();
+              $(nextPlay)[0].click();
+              */
 
-              var attemptSkip = function() {
-                if (document.title == HypeMPlus.Inject.Autoskip.trackToBeSkipped) {
-                 /* Play next by finding next track row and playing
-                  * 
-                  var skipRow = $("div[data-itemid='" + id + "']");
-                  var nextRow = $(skipRow).next();
-                  while (nextRow.attr("autoskip") == "true") {
-                    nextRow = $(nextRow).next();
-                  }
-                  var nextPlay = $(nextRow).find(".playdiv > a").first();
-                  $(nextPlay)[0].click();
-                  */
-
-                  $("#player-controls").find("#playerNext").first()[0].click();
-                  setTimeout(attemptSkip, 500);
-                }
-              };
-              attemptSkip();
+              HypeMPlus.Util.nextTrack();
+              setTimeout(attemptSkip, 500);
             }
-          }
+          };
+          attemptSkip();
         }
       },
 
@@ -168,7 +161,7 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
           $.ajax({ type: "GET",
             url: nextURL,
             dataType: "text",
-            success: HypeMPlus.Inject.Autoskip.scrapeHTML.curry(HypeMPlus.Inject.Autoskip.enrichTrackData, nextURL, tracks),
+            success: HypeMPlus.Inject.Autoskip.scrapeHTML.curry(HypeMPlus.Inject.Autoskip.handleTrackData, nextURL, tracks),
             error: function (response, status, xhr) {
               console.error("Ajax error retrieving " + nextURL);
             }
@@ -179,7 +172,7 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
         callback(tracks);
       },
 
-      enrichTrackData : function(tracks) {
+      handleTrackData : function(tracks) {
         var request = HypeMPlus.Util.newRequest({ action : "get_autoskip",}, function(response) {
 
           HypeMPlus.Inject.Autoskip.autoskipTracks = response.autoskipTracks;
@@ -192,9 +185,29 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
           }
 
           HypeMPlus.Inject.modifyTrackList(tracks, HypeMPlus.Inject.Autoskip.autoskipTracks);
+          HypeMPlus.Inject.modifyPlayer();
         });
         HypeMPlus.Inject.port.postMessage(request);
       },
+    },
+
+    modifyPlayer : function() {
+      var playerAutoskip = $("<div id='playerAutoskip'></div>");
+      $(playerAutoskip).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
+      $(playerAutoskip).hover(function() {
+        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip-hover.png") + "')");
+      }, function() {
+        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
+      });
+      $(playerAutoskip).click(HypeMPlus.Inject.autoskipFromPlayer);
+
+      $(playerAutoskip).insertAfter($("#player-controls").find("#playerFav").first());
+    },
+
+    autoskipFromPlayer : function() {
+      var id = HypeMPlus.Util.getCurrentTrackID();
+      HypeMPlus.Inject.toggleAutoskip($("div[data-itemid='" + id + "']").first());
+      HypeMPlus.Util.nextTrack();
     },
 
     modifyTrackList : function(tracks, autoskipTracks) {
@@ -218,8 +231,8 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       var tools = $(row).find("ul.tools").first();
 
       var autoskipOn = $("<li class='autoskipdiv'><div class='autoskip-control autoskip-on'> </div></li>");
-      $(autoskipOn).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-on.gif") + "')");
-      $(autoskipOn).click(HypeMPlus.Inject.toggleAutoskip);
+      $(autoskipOn).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-on.png") + "')");
+      $(autoskipOn).click(HypeMPlus.Inject.toggleAutoskip.curry(row));
 
       if ($(tools).has("li.autoskipdiv").length) {
         $(tools).find("li.autoskipdiv").first().replaceWith(autoskipOn);
@@ -234,8 +247,8 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       var tools = $(row).find("ul.tools").first();
 
       var autoskipOff = $("<li class='autoskipdiv'><div class='autoskip-control autoskip-off'> </div></li>");
-      $(autoskipOff).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-off.gif") + "')");
-      $(autoskipOff).click(HypeMPlus.Inject.toggleAutoskip);
+      $(autoskipOff).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-off.png") + "')");
+      $(autoskipOff).click(HypeMPlus.Inject.toggleAutoskip.curry(row));
 
       if ($(tools).has("li.autoskipdiv").length) {
         $(tools).find("li.autoskipdiv").first().replaceWith(autoskipOff);
@@ -245,8 +258,7 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       }
     },
 
-    toggleAutoskip : function() {
-      var row = $(this).closest("div[data-itemid]");
+    toggleAutoskip : function(row) {
       var id = $(row).attr("data-itemid");
       var autoskip = ($(row).attr('autoskip') == "true");
 
@@ -268,8 +280,12 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
         }
 
         HypeMPlus.Inject.Autoskip.autoskipTracks[id] = !autoskip;
-      });
 
+        // check if the current track was auto-skipped
+        if (id == HypeMPlus.Util.getCurrentTrackID()) {
+          HypeMPlus.Util.nextTrack();
+        }
+      });
       HypeMPlus.Inject.port.postMessage(request);
     }
   };

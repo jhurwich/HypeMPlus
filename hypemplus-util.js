@@ -4,6 +4,23 @@ if (typeof(HypeMPlus) == "undefined") {
 
 if (typeof(HypeMPlus.Util) == "undefined") {
   HypeMPlus.Util = {
+
+    getCurrentTrackID : function() {
+      var links = $("#player-nowplaying").children("a");
+      for (var i = 0; i < links.length; i++) {
+        var href = $(links[i]).attr("href");
+        if (href.indexOf("track") != -1) {
+          var id = href.replace("/track/", "");
+          return(id);
+        }
+      }
+      console.error("Could not retrieve current track's id");
+    },
+
+    nextTrack : function() {
+      $("#player-controls").find("#playerNext").first()[0].click();
+    },
+
     pendingCallbacks: {},
     newRequest: function(object, callback) {
       var request = (object ? object : { });

@@ -28,14 +28,11 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
       if (request.type != "request") {
         return;
       }
-      console.log("Got message");
 
       var response = HypeMPlus.Util.newResponse(request);
 
       switch (request.action) {
       case "get_autoskip":
-        console.log("getting autoskip");
-
         chrome.storage.sync.get("autoskip", function(stored) {
           response.autoskipTracks = stored.autoskip;
           if (typeof(response.autoskipTracks) == "undefined") {
@@ -47,8 +44,6 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
         break;
 
       case "set_autoskip":
-        console.log("setting autoskip");
-
         chrome.storage.sync.get("autoskip", function(stored) {
           if (typeof(request.on) != "undefined") {
             stored.autoskip[request.on] = true;

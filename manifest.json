@@ -22,6 +22,8 @@
            "hypemplus.js"],
     "run_at": "document_end"
   }],
-  "web_accessible_resources": ["images/autoskip-on.gif",
-                               "images/autoskip-off.gif"]
+  "web_accessible_resources": ["images/autoskip-on.png",
+                               "images/autoskip-off.png",
+                               "images/player-autoskip.png",
+                               "images/player-autoskip-hover.png"]
  }
