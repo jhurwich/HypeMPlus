@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "HypeM Plus",
-  "version": "1.2",
+  "version": "1.3",
   "description": "Improve your experience on the HypeMachine.",
   "homepage_url": "http://hypem.com",
   "icons": {
@@ -9,10 +9,16 @@
     "48": "./images/hype48.jpeg"
   },
   "permissions": ["tabs",
+                  "tts",
                   "storage"],
   "background" : {
     "scripts" : ["background-util.js", 
                  "background.js"]
+  },
+  "browser_action": {
+    "default_icon": "images/hype-ba.png",
+    "default_title": "HypeMPlus",
+    "default_popup": "hypemplus-ba.html"
   },
   "content_scripts": [{
     "matches": ["http://hypem.com/*", "https://hypem.com/*"],
@@ -25,5 +31,6 @@
   "web_accessible_resources": ["images/autoskip-on.png",
                                "images/autoskip-off.png",
                                "images/player-autoskip.png",
-                               "images/player-autoskip-hover.png"]
+                               "images/player-autoskip-hover.png",
+                               "images/hype-ba.png"]
  }

@@ -7,9 +7,76 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
   HypeMPlus.Bkgrd = {
 
     run : function() {
+      chrome.extension.onRequest.addListener(this.requestListener);
       chrome.extension.onConnect.addListener(this.portListener);
     },
 
+    isSpeaking: false,
+    previousPhrase: "",
+    speek: function(phrase, callback) {
+      var bkgrd = HypeMPlus.Bkgrd;
+      if (bkgrd.isSpeaking ||
+          phrase == HypeMPlus.Bkgrd.previousPhrase) {
+        return;
+      }
+      HypeMPlus.Bkgrd.previousPhrase = phrase;
+
+      var improvePhrase = function(phrase) {
+        phrase = phrase.replace(/feat\.*/ig, "featuring");
+        return phrase;
+      };
+      var utterance = improvePhrase(phrase);
+
+      var speechEventHandler = function(e) {
+        if (e.type == 'end' || e.type == 'interrupted' || e.type == 'cancelled' || e.type == 'error') {
+          bkgrd.isSpeaking = false;
+          callback();
+        }
+      };
+
+      chrome.storage.sync.get("currVoice", function(object) {
+        if (typeof(object.currVoice) != "undefined" && object.currVoice != "off") {
+          bkgrd.isSpeaking = true;
+          var rate = localStorage['rate'] || 0.80;
+          var pitch = localStorage['pitch'] || 1.0;
+          var volume = localStorage['volume'] || 1.0;
+          var voiceParams = { voiceName: object.currVoice,
+                              rate: parseFloat(rate),
+                              pitch: parseFloat(pitch),
+                              volume: parseFloat(volume),
+                              onEvent: speechEventHandler
+                            };
+          chrome.tts.speak(utterance, voiceParams);
+        }
+      });
+    },
+    
+    requestListener: function(request, sender, sendResponse) {
+      switch (request.action) {
+      case "getVoices":
+        chrome.storage.sync.get("currVoice", function(object) {
+          chrome.tts.getVoices(function(voices) {
+            var response = {};
+            response.voices = voices;
+            if (typeof(object.currVoice) == "undefined") {
+              object.currVoice = "off"; // default to off
+            }
+            response.currVoice = object.currVoice;
+            sendResponse(response);
+          });
+        });
+        break;
+     case "setSpeech":
+       chrome.storage.sync.set({ "currVoice" : request.voice }, function() {
+         sendResponse(response);
+       });
+       break;
+
+      default:
+        console.error("Unrecognized request: " + JSON.stringify(request));
+        break;
+      }
+    },
 
     portListener : function(port) {
       var util = HypeMPlus.Util;
@@ -60,6 +127,12 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
             HypeMPlus.Util.postMessage(port.sender.tab.id, response);
           });
         });
+        break;
+
+      case "speek":
+        HypeMPlus.Bkgrd.speek(request.phrase, function() {
+          HypeMPlus.Util.postMessage(port.sender.tab.id, response);
+        })
         break;
 
       default:

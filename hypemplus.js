@@ -101,7 +101,15 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
             }
           };
           attemptSkip();
+          return;
         }
+
+        // not skipping, send speech command to backend, won't be used if off
+        var phrase = newTitle.replace("The Hype Machine", "").replace(/[^a-z0-9\s]/gi, '');
+        var request = HypeMPlus.Util.newRequest({ action : "speek", phrase : phrase }, function(response) {
+          // done speeking
+        });
+        HypeMPlus.Inject.port.postMessage(request);
       },
 
       run : function() {
