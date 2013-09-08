@@ -1,6 +1,6 @@
 if (typeof(HypeMPlus) == "undefined") {
   var HypeMPlus = {};
-} 
+}
 
 if (typeof(HypeMPlus.Util) == "undefined") {
 
@@ -44,7 +44,7 @@ if (typeof(HypeMPlus.Util) == "undefined") {
       }
       return response;
     },
-    
+
     ports: {},
     postMessage: function(tabID, message) {
       var self = HypeMPlus.Util;
@@ -54,7 +54,12 @@ if (typeof(HypeMPlus.Util) == "undefined") {
         console.error("Posting message to undefined tabID.");
       }
 
-      if (typeof(tabID) != "undefined" &&
+      if (tabID == "all") {
+        for (var aTabID in ports) {
+          ports[aTabID].postMessage(message);
+        }
+      }
+      else if (typeof(tabID) != "undefined" &&
           typeof(ports[tabID]) != "undefined" &&
           ports[tabID] !== null) {
         ports[tabID].postMessage(message);

@@ -17,6 +17,26 @@ if (typeof(HypeMPlus.Util) == "undefined") {
       console.error("Could not retrieve current track's id");
     },
 
+    play : function() {
+      // player is flaky, use the playbutton on the row instead
+      var id = HypeMPlus.Util.getCurrentTrackID();
+      var playingRow = $("div[data-itemid='" + id + "']");
+      var playButton = $(playingRow).find(".playdiv > a").first();
+      if ($(playButton).hasClass("play")) {
+        $(playButton)[0].click();
+      }
+    },
+
+    pause : function() {
+      // player is flaky, use the playbutton on the row instead
+      var id = HypeMPlus.Util.getCurrentTrackID();
+      var playingRow = $("div[data-itemid='" + id + "']");
+      var playButton = $(playingRow).find(".playdiv > a").first();
+      if ($(playButton).hasClass("pause")) {
+        $(playButton)[0].click();
+      }
+    },
+
     nextTrack : function() {
       $("#player-controls").find("#playerNext").first()[0].click();
     },

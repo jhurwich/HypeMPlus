@@ -7,6 +7,7 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
   HypeMPlus.Inject = {
 
     port : null,
+    currVoice: "off",
     init : function() {
       var self = this;
       self.port = chrome.extension.connect();
@@ -33,6 +34,11 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
             }
           }, 500);
       }, 500);
+
+      var request = HypeMPlus.Util.newRequest({ action : "get_voice",}, function(response) {
+        HypeMPlus.Inject.currVoice = response.voice;
+      });
+      HypeMPlus.Inject.port.postMessage(request);
     },
 
     handleResponse: function(response) {
@@ -56,6 +62,15 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       if (request.type != "request") {
         return;
       }
+      switch (request.action) {
+      case "set_voice":
+        HypeMPlus.Inject.currVoice = request.voice;
+        break;
+
+      default:
+        console.error("Unrecognized request: " + JSON.stringify(request));
+        break;
+      }
     },
 
     LoginCheck : {
@@ -77,25 +92,16 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
     Autoskip : {
 
       trackToBeSkipped: "",
+      lastPhrase: "",
       titleChangeListener: function(newTitle) {
         var id = HypeMPlus.Util.getCurrentTrackID();
-        if (HypeMPlus.Inject.Autoskip.autoskipTracks[id]) {
+        if (typeof(HypeMPlus.Inject.Autoskip.autoskipTracks[id]) != "undefined" &&
+            HypeMPlus.Inject.Autoskip.autoskipTracks[id]) {
           // track should be skipped
           HypeMPlus.Inject.Autoskip.trackToBeSkipped = newTitle;
 
           var attemptSkip = function() {
             if (document.title == HypeMPlus.Inject.Autoskip.trackToBeSkipped) {
-             /* Play next by finding next track row and playing
-              * 
-              var skipRow = $("div[data-itemid='" + id + "']");
-              var nextRow = $(skipRow).next();
-              while (nextRow.attr("autoskip") == "true") {
-                nextRow = $(nextRow).next();
-              }
-              var nextPlay = $(nextRow).find(".playdiv > a").first();
-              $(nextPlay)[0].click();
-              */
-
               HypeMPlus.Util.nextTrack();
               setTimeout(attemptSkip, 500);
             }
@@ -104,95 +110,31 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
           return;
         }
 
-        // not skipping, send speech command to backend, won't be used if off
+        // not skipping, send speech command to backend, if on
         var phrase = newTitle.replace("The Hype Machine", "").replace(/[^a-z0-9\s]/gi, '');
-        var request = HypeMPlus.Util.newRequest({ action : "speek", phrase : phrase }, function(response) {
-          // done speeking
-        });
-        HypeMPlus.Inject.port.postMessage(request);
+        if (HypeMPlus.Inject.Autoskip.lastPhrase == phrase) {
+          return;
+        }
+        HypeMPlus.Inject.Autoskip.lastPhrase = phrase;
+
+        if (typeof(HypeMPlus.Inject.currVoice) != "undefined" && HypeMPlus.Inject.currVoice != "off") {
+          // pause music before talking
+          HypeMPlus.Util.pause();
+
+          var request = HypeMPlus.Util.newRequest({ action : "speek", phrase : phrase }, function(response) {
+            // done speeking, unpause
+            HypeMPlus.Util.play();
+          });
+          HypeMPlus.Inject.port.postMessage(request);
+        }
       },
 
       run : function() {
-        var url = window.document.documentURI.substring(0, window.document.documentURI.indexOf("?"));
-        $.ajax({ type: "GET",
-          url: url,
-          dataType: "text",
-          success: HypeMPlus.Inject.Autoskip.scrapeHTML.curry(HypeMPlus.Inject.Autoskip.enrichTrackData, url, []),
-          error: function (response, status, xhr) {
-            console.error("Ajax error retrieving " + url);
-          }
-        });
-      },
-
-      scrapeHTML : function(callback, queriedURL, previousTracks, responseText, textStatus, headers) {
-        var openTagRegex = function(tag) {
-          return new RegExp("<\s*" + tag + "[^<>]*>", "gi");
-        };
-
-        var closeTagRegex = function(tag) {
-          return new RegExp("<\/" + tag + "[^<>]*>", "gi");
-        };
-
-        var error = function() {
-          console.error("Could not locate displayListData on hypem.com.");
-          alert("ERROR");
-        };
-
-        var openScriptRegex = openTagRegex("script.*id=[\'\"]displayList-data[\'\"]");
-        var closeScriptRegex = closeTagRegex("script");
-
-        var openMatch = openScriptRegex.exec(responseText);
-        if (!openMatch) {
-          error();
-          return;
-        }
-
-        var closeMatch = closeScriptRegex.exec(responseText.substring(openMatch.index));
-        if (!closeMatch) {
-          error();
-          return;
-        }
-
-        var displayListData = JSON.parse(responseText.substring(openMatch.index + openMatch[0].length,
-                                                                openMatch.index + closeMatch.index));
-
-        var tracks = previousTracks;
-        if (typeof(displayListData.tracks) != "undefined") {
-          tracks = tracks.concat(displayListData.tracks);
-        }
-
-        if (typeof(displayListData.page_cur) != "undefined" &&
-            typeof(displayListData.page_next) != "undefined" &&
-            tracks.length < 100) {
-          var baseURL = queriedURL.replace(displayListData.page_cur, "");
-          var nextURL = baseURL + displayListData.page_next;
-          $.ajax({ type: "GET",
-            url: nextURL,
-            dataType: "text",
-            success: HypeMPlus.Inject.Autoskip.scrapeHTML.curry(HypeMPlus.Inject.Autoskip.handleTrackData, nextURL, tracks),
-            error: function (response, status, xhr) {
-              console.error("Ajax error retrieving " + nextURL);
-            }
-          });
-          return;
-        }
-
-        callback(tracks);
-      },
-
-      handleTrackData : function(tracks) {
         var request = HypeMPlus.Util.newRequest({ action : "get_autoskip",}, function(response) {
 
           HypeMPlus.Inject.Autoskip.autoskipTracks = response.autoskipTracks;
 
-          for (var i = 0; i < tracks.length; i++){
-            var track = tracks[i];
-            if (typeof(response.autoskipTracks[track.id]) != "undefined") {
-              track.autoskip = true;
-            }
-          }
-
-          HypeMPlus.Inject.modifyTrackList(tracks, HypeMPlus.Inject.Autoskip.autoskipTracks);
+          HypeMPlus.Inject.modifyTrackList(HypeMPlus.Inject.Autoskip.autoskipTracks);
           HypeMPlus.Inject.modifyPlayer();
         });
         HypeMPlus.Inject.port.postMessage(request);
@@ -200,19 +142,19 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
     },
 
     modifyPlayer : function() {
-       var playerAutoskip = $("<div class='playerAutoskip'></div>");
-       $(playerAutoskip).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
-       $(playerAutoskip).hover(function() {
-         $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip-hover.png") + "')");
-       }, function() {
-         $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
-       });
-       $(playerAutoskip).click(HypeMPlus.Inject.autoskipFromPlayer);
+      var playerAutoskip = $("<div class='playerAutoskip'></div>");
+      $(playerAutoskip).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
+      $(playerAutoskip).hover(function() {
+        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip-hover.png") + "')");
+      }, function() {
+        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip.png") + "')");
+      });
+      $(playerAutoskip).click(HypeMPlus.Inject.autoskipFromPlayer);
 
-       if ($("div.playerAutoskip").length != 0) {  
-         $("div.playerAutoskip").remove();
-       }
-       $(playerAutoskip).insertAfter($("#player-controls").find("#playerFav").first());
+      if ($("div.playerAutoskip").length !== 0) {
+        $("div.playerAutoskip").remove();
+      }
+      $(playerAutoskip).insertBefore($("#player-controls").find("#playerFav").first());
     },
 
     autoskipFromPlayer : function() {
@@ -221,7 +163,7 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       HypeMPlus.Util.nextTrack();
     },
 
-    modifyTrackList : function(tracks, autoskipTracks) {
+    modifyTrackList : function(autoskipTracks) {
       var trackRows = $("div[data-itemid]");
 
       var isAutoskipTest = function(trackRow) {

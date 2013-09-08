@@ -50,9 +50,10 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
         }
       });
     },
-    
+
     requestListener: function(request, sender, sendResponse) {
       switch (request.action) {
+
       case "getVoices":
         chrome.storage.sync.get("currVoice", function(object) {
           chrome.tts.getVoices(function(voices) {
@@ -66,11 +67,17 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
           });
         });
         break;
-     case "setSpeech":
-       chrome.storage.sync.set({ "currVoice" : request.voice }, function() {
-         sendResponse(response);
-       });
-       break;
+
+      case "setSpeech":
+        var voice = request.voice;
+        chrome.storage.sync.set({ "currVoice" : voice }, function() {
+          sendResponse({});
+
+          var request = HypeMPlus.Util.newRequest({ action: "set_voice",
+                                                    voice: voice });
+          HypeMPlus.Util.postMessage("all", request);
+        });
+        break;
 
       default:
         console.error("Unrecognized request: " + JSON.stringify(request));
@@ -115,7 +122,7 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
           if (typeof(stored.autoskip) == "undefined") {
             stored.autoskip = {};
           }
-          
+
           if (typeof(request.on) != "undefined") {
             stored.autoskip[request.on] = true;
           }
@@ -129,10 +136,20 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
         });
         break;
 
+      case "get_voice":
+        chrome.storage.sync.get("currVoice", function(object) {
+          response.voice = "off";
+          if (typeof(object.currVoice) != "undefined" && object.currVoice != "off") {
+            response.voice = object.currVoice;
+          }
+          HypeMPlus.Util.postMessage(port.sender.tab.id, response);
+        });
+        break;
+
       case "speek":
         HypeMPlus.Bkgrd.speek(request.phrase, function() {
           HypeMPlus.Util.postMessage(port.sender.tab.id, response);
-        })
+        });
         break;
 
       default:
