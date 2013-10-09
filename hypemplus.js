@@ -27,18 +27,23 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       setTimeout(function() {
         var oldHref = location.href;
         setInterval(function() {
-            var newHref = location.href;
-            if (oldHref !== newHref) {
-              oldHref = newHref;
-              HypeMPlus.Inject.Autoskip.run();
-            }
-          }, 500);
+          var newHref = location.href;
+          if (oldHref !== newHref) {
+            oldHref = newHref;
+            HypeMPlus.Inject.Autoskip.run();
+          }
+        }, 500);
       }, 500);
 
       var request = HypeMPlus.Util.newRequest({ action : "get_voice",}, function(response) {
         HypeMPlus.Inject.currVoice = response.voice;
       });
       HypeMPlus.Inject.port.postMessage(request);
+    },
+
+    run : function() {
+      HypeMPlus.Inject.LoginCheck.run();
+      HypeMPlus.Inject.Autoskip.run();
     },
 
     handleResponse: function(response) {
@@ -65,6 +70,10 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       switch (request.action) {
       case "set_voice":
         HypeMPlus.Inject.currVoice = request.voice;
+        break;
+
+      case "rerun":
+        HypeMPlus.Inject.run();
         break;
 
       default:
@@ -131,7 +140,6 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
 
       run : function() {
         var request = HypeMPlus.Util.newRequest({ action : "get_autoskip",}, function(response) {
-
           HypeMPlus.Inject.Autoskip.autoskipTracks = response.autoskipTracks;
 
           HypeMPlus.Inject.modifyTrackList(HypeMPlus.Inject.Autoskip.autoskipTracks);
@@ -254,8 +262,7 @@ var main = function(count) {
   }
 
   HypeMPlus.Inject.init();
-  HypeMPlus.Inject.LoginCheck.run();
-  HypeMPlus.Inject.Autoskip.run();
+  HypeMPlus.Inject.run();
 };
 
 main(0);

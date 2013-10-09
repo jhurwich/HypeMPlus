@@ -79,6 +79,11 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
         });
         break;
 
+      case "rerun":
+        var request = HypeMPlus.Util.newRequest({ action: "rerun" });
+        HypeMPlus.Util.postMessage("all", request);
+        break;
+
       default:
         console.error("Unrecognized request: " + JSON.stringify(request));
         break;
@@ -95,7 +100,15 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
       }
       util.ports[port.sender.tab.id] = port;
 
+      port.onDisconnect.addListener(HypeMPlus.Bkgrd.disconnectPortListener);
       port.onMessage.addListener(HypeMPlus.Bkgrd.handleMessage.curry(port));
+    },
+
+    disconnectPortListener : function(port) {
+      var util = HypeMPlus.Util;
+
+      // delete the port in the registry
+      delete util.ports[port.sender.tab.id];
     },
 
     handleMessage: function(port, request) {

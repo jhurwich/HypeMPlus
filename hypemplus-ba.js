@@ -5,7 +5,15 @@ if (typeof HypeMPlus == "undefined") {
 if (typeof(HypeMPlus.BA) == "undefined") {
   HypeMPlus.BA = {
     onload: function() {
+      // we attempt to rerun HypeMPlus when the Browser Action is clicked
+      HypeMPlus.BA.attemptRerun();
+
       HypeMPlus.BA.loadVoices();
+    },
+
+    attemptRerun: function() {
+      var request = { action: "rerun" };
+      chrome.extension.sendRequest(request);
     },
 
     loadVoices: function() {
