@@ -6,29 +6,49 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
 
   HypeMPlus.Bkgrd = {
 
+    debug : false,
+
     run : function() {
+      var self = this;
+      self.log("run() start");
+
       chrome.extension.onRequest.addListener(this.requestListener);
       chrome.extension.onConnect.addListener(this.portListener);
+
+      self.log("run() complete");
     },
 
     isSpeaking: false,
     previousPhrase: "",
     speek: function(phrase, callback) {
       var bkgrd = HypeMPlus.Bkgrd;
+      bkgrd.log("Requested to speak phrase '" + phrase + "'");
+
       if (bkgrd.isSpeaking ||
           phrase == HypeMPlus.Bkgrd.previousPhrase) {
+        bkgrd.log("Already speaking, returning.  Previous phrase: '" + HypeMPlus.Bkgrd.previousPhrase + "'");
         return;
       }
       HypeMPlus.Bkgrd.previousPhrase = phrase;
 
       var improvePhrase = function(phrase) {
+        phrase = phrase.replace("The Hype Machine", "").replace("Hype Machine", "");
+
+        splitPhrase = phrase.split("-"); 
+        if (splitPhrase.length = 2) {
+          phrase = splitPhrase[1] + " by " + splitPhrase[0];
+        } 
+
+        phrase = phrase.replace(/[^a-z0-9\s]/gi, '');
         phrase = phrase.replace(/feat\.*/ig, "featuring");
         return phrase;
       };
       var utterance = improvePhrase(phrase);
+      bkgrd.log("Improved phrase to ' " + utterance + "'");
 
       var speechEventHandler = function(e) {
         if (e.type == 'end' || e.type == 'interrupted' || e.type == 'cancelled' || e.type == 'error') {
+          bkgrd.log("Done speaking.")
           bkgrd.isSpeaking = false;
           callback();
         }
@@ -37,7 +57,7 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
       chrome.storage.sync.get("currVoice", function(object) {
         if (typeof(object.currVoice) != "undefined" && object.currVoice != "off") {
           bkgrd.isSpeaking = true;
-          var rate = localStorage['rate'] || 0.80;
+          var rate = localStorage['rate'] || 0.75;
           var pitch = localStorage['pitch'] || 1.0;
           var volume = localStorage['volume'] || 1.0;
           var voiceParams = { voiceName: object.currVoice,
@@ -46,7 +66,11 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
                               volume: parseFloat(volume),
                               onEvent: speechEventHandler
                             };
+          bkgrd.log("Speaking now");
           chrome.tts.speak(utterance, voiceParams);
+        }
+        else {
+          bkgrd.log("Not speaking, no voice");
         }
       });
     },
@@ -171,6 +195,9 @@ if (typeof(HypeMPlus.Bkgrd) == "undefined") {
       } // end switch
       return;
     },
+
+    // uplevel the util logging method
+    log : HypeMPlus.Util.log,
   };
 
 }

@@ -79,6 +79,13 @@ if (typeof(HypeMPlus.Util) == "undefined") {
       }
       return response;
     },
+
+    log : function(str) {
+      if (HypeMPlus.Inject.debug) {
+        var currentTime = new Date();
+        console.log("HypeMPlus " + currentTime.getTime() + ": " + str);
+      }
+    }
   };
 }
 

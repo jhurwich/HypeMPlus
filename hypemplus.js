@@ -6,10 +6,14 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
 
   HypeMPlus.Inject = {
 
+    debug : false,
+
     port : null,
     currVoice: "off",
     init : function() {
       var self = this;
+      self.log("Beginning initialization");
+
       self.port = chrome.extension.connect();
       self.port.onMessage.addListener(self.handleRequest);
       self.port.onMessage.addListener(self.handleResponse);
@@ -39,11 +43,18 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
         HypeMPlus.Inject.currVoice = response.voice;
       });
       HypeMPlus.Inject.port.postMessage(request);
+
+      self.log("Initialization complete");
     },
 
     run : function() {
-      HypeMPlus.Inject.LoginCheck.run();
-      HypeMPlus.Inject.Autoskip.run();
+      var self = this;
+      self.log("run() start");
+
+      self.LoginCheck.run();
+      self.Autoskip.run();
+
+      self.log("run() complete");
     },
 
     handleResponse: function(response) {
@@ -85,16 +96,22 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
     LoginCheck : {
 
       run : function() {
-        var loginMenu = document.getElementById("menu-out");
+        var utils = HypeMPlus.Util;
+        utils.log("LoginCheck.run() start");
 
+        var loginMenu = document.getElementById("menu-out");
         if (loginMenu != null) {
           // not logged in
+          utils.log("-- not logged in");
+
           var child = loginMenu.firstChild;
           while (child.innerHTML != "Log in") {
             child = child.nextSibling;
           }
           child.click();
         }
+
+        utils.log("LoginCheck.run() complete");
       },
     },
 
@@ -103,7 +120,8 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       trackToBeSkipped: "",
       lastPhrase: "",
       titleChangeListener: function(newTitle) {
-        var id = HypeMPlus.Util.getCurrentTrackID();
+        var utils = HypeMPlus.Util;
+        var id = utils.getCurrentTrackID();
         if (typeof(HypeMPlus.Inject.Autoskip.autoskipTracks[id]) != "undefined" &&
             HypeMPlus.Inject.Autoskip.autoskipTracks[id]) {
           // track should be skipped
@@ -111,7 +129,8 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
 
           var attemptSkip = function() {
             if (document.title == HypeMPlus.Inject.Autoskip.trackToBeSkipped) {
-              HypeMPlus.Util.nextTrack();
+              utils.log("Skipping this track now.");
+              utils.nextTrack();
               setTimeout(attemptSkip, 500);
             }
           };
@@ -120,8 +139,9 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
         }
 
         // not skipping, send speech command to backend, if on
-        var phrase = newTitle.replace("The Hype Machine", "").replace(/[^a-z0-9\s]/gi, '');
-        if (HypeMPlus.Inject.Autoskip.lastPhrase == phrase) {
+        var phrase = newTitle;
+        if (HypeMPlus.Inject.Autoskip.lastPhrase.replace(/[^a-z0-9\s]/gi, '') == phrase.replace(/[^a-z0-9\s]/gi, '')) {
+          utils.log("Not skipping - not speaking because repeated phrase: '" + HypeMPlus.Inject.Autoskip.lastPhrase +"'");
           return;
         }
         HypeMPlus.Inject.Autoskip.lastPhrase = phrase;
@@ -139,13 +159,23 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
       },
 
       run : function() {
-        var request = HypeMPlus.Util.newRequest({ action : "get_autoskip",}, function(response) {
+        var utils = HypeMPlus.Util;
+        utils.log("Autoskip.run() start");
+
+        utils.log("-- Requesting autoskip tracks from backend");
+        var request = utils.newRequest({ action : "get_autoskip",}, function(response) {
           HypeMPlus.Inject.Autoskip.autoskipTracks = response.autoskipTracks;
+          
+          utils.log("-- " + Object.keys(HypeMPlus.Inject.Autoskip.autoskipTracks).length + " autoskip tracks from backend");
+          // utils.log("-- " + JSON.stringify(HypeMPlus.Inject.Autoskip.autoskipTracks));
 
           HypeMPlus.Inject.modifyTrackList(HypeMPlus.Inject.Autoskip.autoskipTracks);
           HypeMPlus.Inject.modifyPlayer();
+          utils.log("-- autoskip track marking complete.")
         });
         HypeMPlus.Inject.port.postMessage(request);
+
+        utils.log("Autoskip.run() complete");
       },
     },
 
@@ -189,33 +219,42 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
 
     markAutoskip : function(index, row) {
       $(row).attr("autoskip", "true");
-      var tools = $(row).find("ul.tools").first();
+      var favdiv = $(row).find("ul.tools").first().find(".favdiv").first();
 
-      var autoskipOn = $("<li class='autoskipdiv'><div class='autoskip-control autoskip-on'> </div></li>");
-      $(autoskipOn).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-on.png") + "')");
-      $(autoskipOn).click(HypeMPlus.Inject.toggleAutoskip.curry(row));
+      var autoskipOnLi = $("<li class='autoskipdiv'><div class='autoskip-control autoskip-on'> </div></li>");
+      var autoskipOnDiv = $(autoskipOnLi).find(".autoskip-on").first();
+      $(autoskipOnDiv).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-on.png") + "')");
+      
+      $(autoskipOnLi).click(HypeMPlus.Inject.toggleAutoskip.curry(row));
 
-      if ($(tools).has("li.autoskipdiv").length) {
-        $(tools).find("li.autoskipdiv").first().replaceWith(autoskipOn);
+      if ($(favdiv).has("li.autoskipdiv").length) {
+        $(favdiv).find("li.autoskipdiv").first().replaceWith(autoskipOnLi);
       }
       else {
-        tools.append(autoskipOn);
+        favdiv.append(autoskipOnLi);
       }
     },
 
     markNonskip : function(index, row) {
       $(row).attr("autoskip", "false");
-      var tools = $(row).find("ul.tools").first();
+      var favdiv = $(row).find("ul.tools").first().find(".favdiv").first();
 
-      var autoskipOff = $("<li class='autoskipdiv'><div class='autoskip-control autoskip-off'> </div></li>");
-      $(autoskipOff).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-off.png") + "')");
-      $(autoskipOff).click(HypeMPlus.Inject.toggleAutoskip.curry(row));
+      var autoskipOffLi = $("<li class='autoskipdiv'><div class='autoskip-control autoskip-off'> </div></li>");
+      var autoskipOffDiv = $(autoskipOffLi).find(".autoskip-off")
+      $(autoskipOffDiv).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-off.png") + "')");
+            
+      $(autoskipOffDiv).hover(function() {
+        $(this).css('background-image', "url('" + chrome.extension.getURL("images/player-autoskip-hover.png") + "')");
+      }, function() {
+        $(this).css('background-image', "url('" + chrome.extension.getURL("images/autoskip-off.png") + "')");
+      });                    
+      $(autoskipOffLi).click(HypeMPlus.Inject.toggleAutoskip.curry(row));
 
-      if ($(tools).has("li.autoskipdiv").length) {
-        $(tools).find("li.autoskipdiv").first().replaceWith(autoskipOff);
+      if ($(favdiv).has("li.autoskipdiv").length) {
+        $(favdiv).find("li.autoskipdiv").first().replaceWith(autoskipOffLi);
       }
       else {
-        tools.append(autoskipOff);
+        favdiv.append(autoskipOffLi);
       }
     },
 
@@ -248,7 +287,10 @@ if (typeof(HypeMPlus.Inject) == "undefined") {
         }
       });
       HypeMPlus.Inject.port.postMessage(request);
-    }
+    },
+
+    // uplevel the util logging method
+    log : HypeMPlus.Util.log,
   };
 }
 

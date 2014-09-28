@@ -64,6 +64,13 @@ if (typeof(HypeMPlus.Util) == "undefined") {
           ports[tabID] !== null) {
         ports[tabID].postMessage(message);
       }
+    },
+
+    log : function(str) {
+      if (HypeMPlus.Bkgrd.debug) {
+        var currentTime = new Date();
+        console.log("HypeMPlus " + currentTime.getTime() + ": " + str);
+      }
     }
   };
 

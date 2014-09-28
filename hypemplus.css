@@ -8,24 +8,26 @@ div.playerAutoskip {
   display: block;
   float: left;
   border-right: 1px solid #272727;
-  background-position: center;
+  background-position: 50% 60%;
+  background-size: 16px 17px;
   background-repeat: no-repeat;
 
 }
 li.autoskipdiv {
   float: right;
   position: relative;
-  height: 25px;
-  width: 24px;
-  margin: 0;
-  padding: 0;
   cursor: pointer;
 }
 
 div.autoskip-control {
-  float: left;
+  height: 24px;
+  width: 31px;
+  padding: 13px 0 0 6px;
+  float: right;
   position: relative;
-  top: 1px;
+  background-position: center;
+  background-size: 23px 24px;
+  background-repeat: no-repeat;
 }
 
 a.favcount-off {
